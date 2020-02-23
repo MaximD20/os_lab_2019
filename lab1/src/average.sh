@@ -1,9 +1,11 @@
 t=0
-for param in "$@"
+count=0
+for param in $(cat $1)
 do
-echo $param
 t=$[t+param]
+count=$[count+1]
 done
-result=$[t/$#]
-echo $#
-echo $result
+result=$[t/count]
+echo "Количество чисел: $count"
+echo "-----------------"
+echo "Среднее арифметическое: $result"
