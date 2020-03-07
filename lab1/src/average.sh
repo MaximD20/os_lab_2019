@@ -1,20 +1,11 @@
 t=0
 count=0
-if (($#>1)); then
-for param in $@
+while read line
 do
-t=$[t+param]
-count=$[count+1]
+let "t = t + line" 
+let "count = count + 1"
 done
-result=$[t/count]
-else
-for param in $(cat $1)
-do
-t=$[t+param]
-count=$[count+1]
-done
-result=$[t/count]
-fi
+let "result = t / count"
 echo "Количество чисел: $count"
 echo "-----------------"
 echo "Среднее арифметическое: $result"
