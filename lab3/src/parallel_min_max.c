@@ -40,18 +40,15 @@ int main(int argc, char **argv) {
         switch (option_index) {
           case 0:
             seed = atoi(optarg);
-            // your code here
-            // error handling
+           printf("Case 0");
             break;
           case 1:
             array_size = atoi(optarg);
-            // your code here
-            // error handling
+            printf("Case 1");
             break;
           case 2:
             pnum = atoi(optarg);
-            // your code here
-            // error handling
+            printf("Case 2");
             break;
           case 3:
             with_files = true;
@@ -90,21 +87,74 @@ int main(int argc, char **argv) {
 
   struct timeval start_time;
   gettimeofday(&start_time, NULL);
-
-  for (int i = 0; i < pnum; i++) {
+  int pipefd[2];
+  int pipefd2[2];
+  int piperes[2];
+    int piperes2[2];
+    int i;
+  for ( i = 0; i < pnum; i++) {
     pid_t child_pid = fork();
     if (child_pid >= 0) {
       // successful fork
       active_child_processes += 1;
       if (child_pid == 0) {
-        // child process
-
-        // parallel somehow
-
         if (with_files) {
-          // use files here
+               int i;
+            if(active_child_processes==1)
+            {
+                FILE * file1 = fopen("procces1.txt","w");
+                for(i=0;i<array_size/2;i++)
+                {
+                    fprintf(file1, "%d\n", *array);
+                    array++;
+                }
+                fclose(file1);
+                array = array;
+            }
+            
+            else
+            {
+                    FILE * file2 = fopen("procces2.txt","w");
+                    for(i=0;i<array_size;i++)
+                    {
+                        if(i<array_size/2)
+                        {
+                            array++;
+                            continue;
+                        }
+                        fprintf(file2, "%d\n", *array);
+                        array++;
+                    }
+                    fclose(file2);
+            }
         } else {
-          // use pipe here
+          if(active_child_processes == 1)
+            {
+              
+              if (pipe(pipefd) < 0) {
+                    printf( "Pipe failed: ");
+                    exit(1);
+                }
+                for(i=0;i<array_size/2;i++)
+                {
+                    printf("Запись в очередь 1\n");
+                    write(pipefd[1],&*array,sizeof(int));
+                    array++;
+                }
+            }
+            if(active_child_processes == 2)
+            {
+              if (pipe(pipefd2) < 0) {
+                    printf( "Pipe2 failed: ");
+                    exit(1);
+                }
+                for(i=array_size/2;i<array_size;i++)
+                {
+                    printf("Запись в очередь 2\n");
+                    write(pipefd2[1],&*array,sizeof(int));
+                    array++;
+                }
+            }
         }
         return 0;
       }
@@ -116,8 +166,108 @@ int main(int argc, char **argv) {
   }
 
   while (active_child_processes > 0) {
-    // your code here
+            
+    int  val;
+    int min2 = INT_MAX;
+    int max2 = INT_MIN;
+    if(with_files)
+    {
+        if(active_child_processes ==2)
+        {
+        FILE * f = fopen("procces2.txt","r+");
+        if(f == NULL)
+        {
+            printf("Error open process2 COmpile \n");
+        }
+        else
+        {
+            while(!feof(f))
+            {
+                if(fscanf(f,"%d\n",&val))
+                    {
+                        if(val<min2)
+                        {
+                        min2= val;
+                        }
+                        if(val>max2)
+                        {
+                        max2 = val;
+                        }
+                    }
+            }
+            fclose(f);
+            FILE *f = fopen("procces2.txt","w+");
+            system("stop");
+            fprintf(f, "%d\n", min2);
+            fprintf(f, "%d\n",max2);
+            fclose(f);
+        }
+    }
+    else
+    {
+        FILE * f = fopen("procces1.txt","r+");
+        if(!f)
+            printf("Error open process1 COmpile \n");
+        else
+        {
+            while(!feof(f))
+            {
+                if(fscanf(f,"%d\n",&val))
+                    {
+                                            
+                        if(val<min2)
+                        {
+                        min2= val;
+                        }
+                        if(val>max2)
+                        {
+                        max2 = val;
+                        }
+                    }
+            }
+            fclose(f);
+            FILE *f = fopen("procces1.txt","w+");
+            fprintf(f, "%d\n", min2);
+            fprintf(f, "%d\n",max2);
+            fclose(f);
+        }
+    }
+    }
+    else
+    {
 
+        int i;
+        int p;
+        if(active_child_processes ==2)
+        {
+            for(i=0; i<array_size/2;i++)
+            {
+                printf("Чтение очередь 1\n");
+                read(pipefd[0],&p, sizeof(int));
+                if (p < min2)
+                min2 = p;
+                if(p>max2)
+                max2 = p;
+            }
+            write(piperes2[1],&min2,sizeof(int));
+        write(piperes2[1],&max2,sizeof(int));
+        }
+        else
+        {
+            for(i=array_size/2;i<array_size;i++)
+            {
+                printf("Чтение очередь 2\n");
+                read(pipefd2[0],&p, sizeof(int));
+                if (p < min2)
+                min2 = p;
+                if(p>max2)
+                max2 = p;
+            }
+            write(piperes[1],&min2,sizeof(int));
+        write(piperes[1],&max2,sizeof(int));
+        }
+        
+    }
     active_child_processes -= 1;
   }
 
@@ -125,14 +275,69 @@ int main(int argc, char **argv) {
   min_max.min = INT_MAX;
   min_max.max = INT_MIN;
 
-  for (int i = 0; i < pnum; i++) {
+  for ( i = 0; i < pnum; i++) {
+      printf("Новый процесс\n");
     int min = INT_MAX;
     int max = INT_MIN;
-
+    int val, count = 0;
     if (with_files) {
-      // read from files
+        if(i==0)
+        {
+        FILE * f = fopen("procces1.txt","r");
+        if(!f)
+            printf("Error open process1.txt \n");
+        else
+        {
+            while(!feof(f))
+            {printf("Чтение файл 2\n");
+                if(fscanf(f,"%d\n",&val))
+                    {
+                    if(count == 0)
+                    min = val;
+                    else
+                    max = val;
+                    }
+                count++;
+            }
+            fclose(f);
+        }
+    }
+    else
+    {
+        FILE * f = fopen("procces2.txt","r");
+        if(!f)
+            printf("Error open process2.txt \n");
+        else
+        {
+            while(!feof(f))
+            {
+                if(fscanf(f,"%d\n",&val))
+                    {
+                    if(count == 0)
+                    {
+                    min = val;
+                    }
+                    else
+                    {
+                    max = val;
+                    }
+                    }
+                count++;
+            }
+            fclose(f);
+        }
+    }
     } else {
-      // read from pipes
+        if(i==0)
+        {
+      read(piperes[0],&min, sizeof(int));
+      read(piperes[0],&max, sizeof(int));
+        }
+        else
+        {
+            read(piperes2[0],&min, sizeof(int));
+      read(piperes2[0],&max, sizeof(int));
+        }
     }
 
     if (min < min_max.min) min_max.min = min;
