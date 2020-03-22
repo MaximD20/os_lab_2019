@@ -110,7 +110,11 @@ int main(int argc, char **argv) {
     int piperes2[2];
     int i;
     char ** files_names;
+    int * znach;
+    znach = malloc(sizeof(int)*pnum);
+    znach[0] = 0;
     files_names = malloc(sizeof(char*)*pnum);
+    /*Создание массива файлов взаимодействия*/
     for(i=0; i<pnum; i++ )
     {
        char buff = rand()%26+0x61;
@@ -119,61 +123,82 @@ int main(int argc, char **argv) {
         strncat(files_names[i], ".txt",4);
         printf("%s\n",files_names[i]);
     }
-  for ( i = 0; i < pnum; i++) {
-pid_t child_pid = fork();
-if (child_pid >= 0) {
-// successful fork
-active_child_processes += 1;
-if (child_pid == 0) {
-if (with_files) {
-int i;
-FILE * file1 = fopen(files_names[i],"w");
-for(i=0;i<array_size/2;i++)
-{
-fprintf(file1, "%d\n", *array);
-array++;
-}
-fclose(file1);
-array = array;
-}
-else {
-if(active_child_processes == 1)
-{
-              
-if (pipe(pipefd) < 0) {
-printf( "Pipe failed: ");
-                    exit(1);
-                }
-                for(i=0;i<array_size/2;i++)
-                {
-                    printf("Запись в очередь 1\n");
-                    write(pipefd[1],&*array,sizeof(int));
-                    array++;
-                }
-            }
-            if(active_child_processes == 2)
+    for(i = 1; i<pnum; i++)
+    {
+        znach[i] = znach[i-1] + array_size/pnum - 1;
+        printf("%i\n", znach[i]);
+    }
+for ( i = 0; i < pnum; i++) {
+    pid_t child_pid = fork();
+    printf("New procces\n"); 
+    if (child_pid >= 0) 
+    {
+        active_child_processes += 1;
+        if (child_pid == 0) 
+        {
+            if (with_files) 
             {
-              if (pipe(pipefd2) < 0) {
-                    printf( "Pipe2 failed: ");
-                    exit(1);
-                }
-                for(i=array_size/2;i<array_size;i++)
+                int j,k;
+                FILE * file1 = fopen(files_names[i],"w");
+                for(j=znach[i];j<znach[i+1];i++)
                 {
-                    printf("Запись в очередь 2\n");
-                    write(pipefd2[1],&*array,sizeof(int));
+                    printf("Пределы ввода от %i до %i\n",znach[i],znach[i+1]);
+                    if(j!=0 && j == znach[i])
+                    {
+                        while(k<znach[i])
+                        {
+                            array++;
+                            k++;
+                        }
+                    }
+                    fprintf(file1, "%d\n", *array);
+                    printf("В файл %s записан элемент: %i\n",files_names[i],*array);
                     array++;
                 }
+                fclose(file1);
+                array = array;
             }
+            else 
+            {
+                if(active_child_processes == 1)
+                {
+                    if (pipe(pipefd) < 0) 
+                    {
+                        printf( "Pipe failed: ");
+                        exit(1);
+                    }
+                    for(i=0;i<array_size/2;i++)
+                    {
+                        printf("Запись в очередь 1\n");
+                        write(pipefd[1],&*array,sizeof(int));
+                        array++;
+                    }
+                }
+                if(active_child_processes == 2)
+                {
+                    if (pipe(pipefd2) < 0) 
+                    {
+                        printf( "Pipe2 failed: ");
+                        exit(1);
+                    }
+                    for(i=array_size/2;i<array_size;i++)
+                    {
+                        printf("Запись в очередь 2\n");
+                        write(pipefd2[1],&*array,sizeof(int));
+                        array++;
+                    }
+                }
+            }
+        }
+        
+        
+    }
+    else 
+    {
+        printf("Fork failed!\n");
+        return 1;
+    }
 }
-return 0;
-}
-else {
-printf("Fork failed!\n");
-return 1;
-}
-  
-}
-  }
   while (active_child_processes > 0) {
             
     int  val;
@@ -204,7 +229,6 @@ return 1;
             }
             fclose(f);
             FILE *f = fopen(files_names[active_child_processes-1],"w+");
-            system("stop");
             fprintf(f, "%d\n", min2);
             fprintf(f, "%d\n",max2);
             fclose(f);
