@@ -40,15 +40,31 @@ int main(int argc, char **argv) {
         switch (option_index) {
           case 0:
             seed = atoi(optarg);
-           printf("Case 0");
-            break;
+            if(seed<0)
+            {
+            printf("Error value seed! Seed is positive. Try again!\n");
+            exit(1);
+                break;
+            }
           case 1:
             array_size = atoi(optarg);
-            printf("Case 1");
+            if(array_size<0)
+            {
+            printf("Error! Array_size is positive! Try again\n");
+            exit(1);
+            }
             break;
           case 2:
             pnum = atoi(optarg);
-            printf("Case 2");
+            if(pnum>= array_size)
+            {
+            printf("Error! Pnum > Array_size. Try again\n");
+            exit(1);
+            }
+            else if(pnum < 1)
+            {
+                printf("Error! Pnum is positive! Try again\n");
+            }
             break;
           case 3:
             with_files = true;
@@ -87,52 +103,45 @@ int main(int argc, char **argv) {
 
   struct timeval start_time;
   gettimeofday(&start_time, NULL);
+  
   int pipefd[2];
   int pipefd2[2];
   int piperes[2];
     int piperes2[2];
     int i;
+    char ** files_names;
+    files_names = malloc(sizeof(char*)*pnum);
+    for(i=0; i<pnum; i++ )
+    {
+       char buff = rand()%26+0x61;
+        files_names[i] = malloc(sizeof(char)*5);
+        strcpy(files_names[i],&buff);
+        strncat(files_names[i], ".txt",4);
+        printf("%s\n",files_names[i]);
+    }
   for ( i = 0; i < pnum; i++) {
-    pid_t child_pid = fork();
-    if (child_pid >= 0) {
-      // successful fork
-      active_child_processes += 1;
-      if (child_pid == 0) {
-        if (with_files) {
-               int i;
-            if(active_child_processes==1)
-            {
-                FILE * file1 = fopen("procces1.txt","w");
-                for(i=0;i<array_size/2;i++)
-                {
-                    fprintf(file1, "%d\n", *array);
-                    array++;
-                }
-                fclose(file1);
-                array = array;
-            }
-            
-            else
-            {
-                    FILE * file2 = fopen("procces2.txt","w");
-                    for(i=0;i<array_size;i++)
-                    {
-                        if(i<array_size/2)
-                        {
-                            array++;
-                            continue;
-                        }
-                        fprintf(file2, "%d\n", *array);
-                        array++;
-                    }
-                    fclose(file2);
-            }
-        } else {
-          if(active_child_processes == 1)
-            {
+pid_t child_pid = fork();
+if (child_pid >= 0) {
+// successful fork
+active_child_processes += 1;
+if (child_pid == 0) {
+if (with_files) {
+int i;
+FILE * file1 = fopen(files_names[i],"w");
+for(i=0;i<array_size/2;i++)
+{
+fprintf(file1, "%d\n", *array);
+array++;
+}
+fclose(file1);
+array = array;
+}
+else {
+if(active_child_processes == 1)
+{
               
-              if (pipe(pipefd) < 0) {
-                    printf( "Pipe failed: ");
+if (pipe(pipefd) < 0) {
+printf( "Pipe failed: ");
                     exit(1);
                 }
                 for(i=0;i<array_size/2;i++)
@@ -155,16 +164,16 @@ int main(int argc, char **argv) {
                     array++;
                 }
             }
-        }
-        return 0;
-      }
-
-    } else {
-      printf("Fork failed!\n");
-      return 1;
-    }
+}
+return 0;
+}
+else {
+printf("Fork failed!\n");
+return 1;
+}
+  
+}
   }
-
   while (active_child_processes > 0) {
             
     int  val;
@@ -172,9 +181,7 @@ int main(int argc, char **argv) {
     int max2 = INT_MIN;
     if(with_files)
     {
-        if(active_child_processes ==2)
-        {
-        FILE * f = fopen("procces2.txt","r+");
+        FILE * f = fopen(files_names[active_child_processes-1],"r+");
         if(f == NULL)
         {
             printf("Error open process2 COmpile \n");
@@ -196,42 +203,12 @@ int main(int argc, char **argv) {
                     }
             }
             fclose(f);
-            FILE *f = fopen("procces2.txt","w+");
+            FILE *f = fopen(files_names[active_child_processes-1],"w+");
             system("stop");
             fprintf(f, "%d\n", min2);
             fprintf(f, "%d\n",max2);
             fclose(f);
         }
-    }
-    else
-    {
-        FILE * f = fopen("procces1.txt","r+");
-        if(!f)
-            printf("Error open process1 COmpile \n");
-        else
-        {
-            while(!feof(f))
-            {
-                if(fscanf(f,"%d\n",&val))
-                    {
-                                            
-                        if(val<min2)
-                        {
-                        min2= val;
-                        }
-                        if(val>max2)
-                        {
-                        max2 = val;
-                        }
-                    }
-            }
-            fclose(f);
-            FILE *f = fopen("procces1.txt","w+");
-            fprintf(f, "%d\n", min2);
-            fprintf(f, "%d\n",max2);
-            fclose(f);
-        }
-    }
     }
     else
     {
@@ -281,16 +258,14 @@ int main(int argc, char **argv) {
     int max = INT_MIN;
     int val, count = 0;
     if (with_files) {
-        if(i==0)
-        {
-        FILE * f = fopen("procces1.txt","r");
-        if(!f)
+        FILE * f1 = fopen(files_names[i],"r");
+        if(!f1)
             printf("Error open process1.txt \n");
         else
         {
-            while(!feof(f))
+            while(!feof(f1))
             {printf("Чтение файл 2\n");
-                if(fscanf(f,"%d\n",&val))
+                if(fscanf(f1,"%d\n",&val))
                     {
                     if(count == 0)
                     min = val;
@@ -299,34 +274,8 @@ int main(int argc, char **argv) {
                     }
                 count++;
             }
-            fclose(f);
+            fclose(f1);
         }
-    }
-    else
-    {
-        FILE * f = fopen("procces2.txt","r");
-        if(!f)
-            printf("Error open process2.txt \n");
-        else
-        {
-            while(!feof(f))
-            {
-                if(fscanf(f,"%d\n",&val))
-                    {
-                    if(count == 0)
-                    {
-                    min = val;
-                    }
-                    else
-                    {
-                    max = val;
-                    }
-                    }
-                count++;
-            }
-            fclose(f);
-        }
-    }
     } else {
         if(i==0)
         {
