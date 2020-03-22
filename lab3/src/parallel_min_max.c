@@ -121,16 +121,19 @@ int main(int argc, char **argv) {
         files_names[i] = malloc(sizeof(char)*5);
         strcpy(files_names[i],&buff);
         strncat(files_names[i], ".txt",4);
-        printf("%s\n",files_names[i]);
     }
-    for(i = 1; i<pnum; i++)
+    for(i = 1; i<pnum+1; i++)
     {
         znach[i] = znach[i-1] + array_size/pnum - 1;
-        printf("%i\n", znach[i]);
+        printf("Значение %i интервала равно %i\n",i, znach[i]);
+        if(i>1)
+        {
+            znach[i] = znach[i-1] + array_size/pnum;
+        printf("Значение %i интервала равно %i\n",i, znach[i]);
+        }
     }
 for ( i = 0; i < pnum; i++) {
     pid_t child_pid = fork();
-    printf("New procces\n"); 
     if (child_pid >= 0) 
     {
         active_child_processes += 1;
@@ -199,6 +202,7 @@ for ( i = 0; i < pnum; i++) {
         return 1;
     }
 }
+printf("Num procces is %i", active_child_processes);
   while (active_child_processes > 0) {
             
     int  val;
@@ -206,6 +210,7 @@ for ( i = 0; i < pnum; i++) {
     int max2 = INT_MIN;
     if(with_files)
     {
+        printf("File name is %s", files_names[active_child_processes-1]);
         FILE * f = fopen(files_names[active_child_processes-1],"r+");
         if(f == NULL)
         {
