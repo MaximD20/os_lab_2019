@@ -108,12 +108,15 @@ int main(int argc, char **argv) {
   int pipefd2[2];
   int piperes[2];
     int piperes2[2];
-    int i;
+    int i,j;
+    int count,k = 0;
     char ** files_names;
     int * znach;
     znach = malloc(sizeof(int)*pnum);
     znach[0] = 0;
     files_names = malloc(sizeof(char*)*pnum);
+    int * pnum_mass;
+    pnum_mass = malloc(sizeof(int)*pnum);
     /*Создание массива файлов взаимодействия*/
     for(i=0; i<pnum; i++ )
     {
@@ -122,87 +125,105 @@ int main(int argc, char **argv) {
         strcpy(files_names[i],&buff);
         strncat(files_names[i], ".txt",4);
     }
+    /*
+    Задание интервалов чтения данных
+    */
     for(i = 1; i<pnum+1; i++)
     {
-        znach[i] = znach[i-1] + array_size/pnum - 1;
-        printf("Значение %i интервала равно %i\n",i, znach[i]);
+
+        znach[i] = znach[i-1] + array_size/pnum;
         if(i>1)
         {
-            znach[i] = znach[i-1] + array_size/pnum;
-        printf("Значение %i интервала равно %i\n",i, znach[i]);
+            znach[i] = znach[i-1] + array_size/pnum ;
         }
     }
-for ( i = 0; i < pnum; i++) {
-    pid_t child_pid = fork();
-    if (child_pid >= 0) 
-    {
-        active_child_processes += 1;
-        if (child_pid == 0) 
+    for ( i = 0; i < pnum; i++) {
+        if(count != 0 )
         {
-            if (with_files) 
+            while(*pnum_mass)
             {
-                int j,k;
-                FILE * file1 = fopen(files_names[i],"w");
-                for(j=znach[i];j<znach[i+1];i++)
+                if(*pnum_mass == i)
                 {
-                    printf("Пределы ввода от %i до %i\n",znach[i],znach[i+1]);
-                    if(j!=0 && j == znach[i])
+                    printf("Найден аналогичный элемент!\n");
+                    k = 1;
+                }
+                pnum_mass++;
+            }
+            if(k==1)
+            {
+                continue;
+            }
+        }
+        pnum_mass[count] = i;
+        count++;
+        printf("Number procces is: %i\n", i);
+        pid_t child_pid = fork();
+        if (child_pid >= 0) 
+        {
+            active_child_processes += 1;
+            if (child_pid == 0) 
+            {
+                if (with_files) 
+                {
+                    k=0;
+                    FILE * file1 = fopen(files_names[i],"w");
+                    for(j=znach[i];j<znach[i+1];j++)
                     {
-                        while(k<znach[i])
+                        if(j!=0 && j == znach[i])
                         {
+                            while(k<znach[i])
+                            {
+                                array++;
+                                k++;
+                            }
+                        }
+                        fprintf(file1, "%d\n", *array);
+                        array++;
+                    }
+                    fclose(file1);
+                    array = array;
+                }
+                else 
+                {
+                    if(active_child_processes == 1)
+                    {
+                        if (pipe(pipefd) < 0) 
+                        {
+                            printf( "Pipe failed: ");
+                            exit(1);
+                        }
+                        for(i=0;i<array_size/2;i++)
+                        {
+                            printf("Запись в очередь 1\n");
+                            write(pipefd[1],&*array,sizeof(int));
                             array++;
-                            k++;
                         }
                     }
-                    fprintf(file1, "%d\n", *array);
-                    printf("В файл %s записан элемент: %i\n",files_names[i],*array);
-                    array++;
-                }
-                fclose(file1);
-                array = array;
-            }
-            else 
-            {
-                if(active_child_processes == 1)
-                {
-                    if (pipe(pipefd) < 0) 
+                    if(active_child_processes == 2)
                     {
-                        printf( "Pipe failed: ");
-                        exit(1);
-                    }
-                    for(i=0;i<array_size/2;i++)
-                    {
-                        printf("Запись в очередь 1\n");
-                        write(pipefd[1],&*array,sizeof(int));
-                        array++;
-                    }
-                }
-                if(active_child_processes == 2)
-                {
-                    if (pipe(pipefd2) < 0) 
-                    {
-                        printf( "Pipe2 failed: ");
-                        exit(1);
-                    }
-                    for(i=array_size/2;i<array_size;i++)
-                    {
-                        printf("Запись в очередь 2\n");
-                        write(pipefd2[1],&*array,sizeof(int));
-                        array++;
+                        if (pipe(pipefd2) < 0) 
+                        {
+                            printf( "Pipe2 failed: ");
+                            exit(1);
+                        }
+                        for(i=array_size/2;i<array_size;i++)
+                        {
+                            printf("Запись в очередь 2\n");
+                            write(pipefd2[1],&*array,sizeof(int));
+                            array++;
+                        }
                     }
                 }
             }
+            
+            
         }
-        
-        
+        else 
+        {
+            printf("Fork failed!\n");
+            return 1;
+        }
     }
-    else 
-    {
-        printf("Fork failed!\n");
-        return 1;
-    }
-}
-printf("Num procces is %i", active_child_processes);
   while (active_child_processes > 0) {
             
     int  val;
@@ -210,7 +231,7 @@ printf("Num procces is %i", active_child_processes);
     int max2 = INT_MIN;
     if(with_files)
     {
-        printf("File name is %s", files_names[active_child_processes-1]);
+        printf("File name is %s\n", files_names[active_child_processes-1]);
         FILE * f = fopen(files_names[active_child_processes-1],"r+");
         if(f == NULL)
         {
@@ -282,7 +303,7 @@ printf("Num procces is %i", active_child_processes);
   min_max.max = INT_MIN;
 
   for ( i = 0; i < pnum; i++) {
-      printf("Новый процесс\n");
+      printf("Новый процесс номер: %i\n",i);
     int min = INT_MAX;
     int max = INT_MIN;
     int val, count = 0;
@@ -328,7 +349,6 @@ printf("Num procces is %i", active_child_processes);
   double elapsed_time = (finish_time.tv_sec - start_time.tv_sec) * 1000.0;
   elapsed_time += (finish_time.tv_usec - start_time.tv_usec) / 1000.0;
 
-  free(array);
 
   printf("Min: %d\n", min_max.min);
   printf("Max: %d\n", min_max.max);
@@ -336,3 +356,8 @@ printf("Num procces is %i", active_child_processes);
   fflush(NULL);
   return 0;
 }
+/*Версия от 23 марта
+Нынешние ошибки
+1. При генерации потоков происходит лишняя итерация
+2. Вывод минимума и максимума происходит более одного раза (pnum +1)
+3. Неккоректная обработка входных данных более одного раза*/
