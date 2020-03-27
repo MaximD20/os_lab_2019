@@ -46,9 +46,10 @@ int main(int argc, char **argv) {
             exit(1);
                 break;
             }
+            break;
           case 1:
             array_size = atoi(optarg);
-            if(array_size<0)
+             if(array_size<0)
             {
             printf("Error! Array_size is positive! Try again\n");
             exit(1);
@@ -56,6 +57,16 @@ int main(int argc, char **argv) {
             break;
           case 2:
             pnum = atoi(optarg);
+            if(array_size %pnum !=0)
+            {
+                printf("Error! Кол-во потоков должно быть кратно кол-ву элементов! Повторите попытку!\n");
+                exit(1);
+            }
+            if(array_size / pnum <3)
+            {
+                printf("Error! Слишком большое кол-во процессов для такого кол-ва элементов! Повторите попытку!\n");
+                exit(1);
+            }
             if(pnum>= array_size)
             {
             printf("Error! Pnum > Array_size. Try again\n");
@@ -100,10 +111,6 @@ int main(int argc, char **argv) {
   int *array = malloc(sizeof(int) * array_size);
   GenerateArray(array, array_size, seed);
   int active_child_processes = 0;
-
-  struct timeval start_time;
-  gettimeofday(&start_time, NULL);
-  
   int pipefd[2];
   int pipefd2[2];
   int piperes[2];
@@ -130,41 +137,27 @@ int main(int argc, char **argv) {
     */
     for(i = 1; i<pnum+1; i++)
     {
-
+    
         znach[i] = znach[i-1] + array_size/pnum;
         if(i>1)
         {
             znach[i] = znach[i-1] + array_size/pnum ;
         }
     }
-    for ( i = 0; i < pnum; i++) {
-        if(count != 0 )
-        {
-            while(*pnum_mass)
-            {
-                if(*pnum_mass == i)
-                {
-                    printf("Найден аналогичный элемент!\n");
-                    k = 1;
-                }
-                pnum_mass++;
-            }
-            if(k==1)
-            {
-                continue;
-            }
-        }
-        pnum_mass[count] = i;
-        count++;
-        printf("Number procces is: %i\n", i);
-        pid_t child_pid = fork();
-        if (child_pid >= 0) 
-        {
-            active_child_processes += 1;
-            if (child_pid == 0) 
-            {
-                if (with_files) 
-                {
+  struct timeval start_time;
+  gettimeofday(&start_time, NULL);
+
+  for ( i = 0; i < pnum; i++) {
+    pid_t child_pid = fork();
+    if (child_pid >= 0) {
+      // successful fork
+      active_child_processes += 1;
+      if (child_pid == 0) {
+        // child process
+
+        // parallel somehow
+
+        if (with_files) {
                     k=0;
                     FILE * file1 = fopen(files_names[i],"w");
                     for(j=znach[i];j<znach[i+1];j++)
@@ -182,10 +175,8 @@ int main(int argc, char **argv) {
                     }
                     fclose(file1);
                     array = array;
-                }
-                else 
-                {
-                    if(active_child_processes == 1)
+        } else {
+          if(active_child_processes == 1)
                     {
                         if (pipe(pipefd) < 0) 
                         {
@@ -213,25 +204,22 @@ int main(int argc, char **argv) {
                             array++;
                         }
                     }
-                }
-            }
-            
-            
         }
-        else 
-        {
-            printf("Fork failed!\n");
-            return 1;
-        }
+        return 0;
+      }
+
+    } else {
+      printf("Fork failed!\n");
+      return 1;
     }
+  }
+
   while (active_child_processes > 0) {
-            
     int  val;
     int min2 = INT_MAX;
     int max2 = INT_MIN;
     if(with_files)
     {
-        printf("File name is %s\n", files_names[active_child_processes-1]);
         FILE * f = fopen(files_names[active_child_processes-1],"r+");
         if(f == NULL)
         {
@@ -243,12 +231,15 @@ int main(int argc, char **argv) {
             {
                 if(fscanf(f,"%d\n",&val))
                     {
+                        
                         if(val<min2)
                         {
+                            printf("Для файла %s установлен мин. элемент %i\n", files_names[active_child_processes-1],val);
                         min2= val;
                         }
                         if(val>max2)
                         {
+                            printf("Для файла %s установлен макс. элемент %i\n", files_names[active_child_processes-1],val);
                         max2 = val;
                         }
                     }
@@ -295,6 +286,7 @@ int main(int argc, char **argv) {
         }
         
     }
+
     active_child_processes -= 1;
   }
 
@@ -303,18 +295,18 @@ int main(int argc, char **argv) {
   min_max.max = INT_MIN;
 
   for ( i = 0; i < pnum; i++) {
-      printf("Новый процесс номер: %i\n",i);
     int min = INT_MAX;
     int max = INT_MIN;
-    int val, count = 0;
+
     if (with_files) {
-        FILE * f1 = fopen(files_names[i],"r");
+            int val, count = 0;
+      FILE * f1 = fopen(files_names[i],"r");
         if(!f1)
             printf("Error open process1.txt \n");
         else
         {
             while(!feof(f1))
-            {printf("Чтение файл 2\n");
+            {
                 if(fscanf(f1,"%d\n",&val))
                     {
                     if(count == 0)
@@ -327,7 +319,7 @@ int main(int argc, char **argv) {
             fclose(f1);
         }
     } else {
-        if(i==0)
+      if(i==0)
         {
       read(piperes[0],&min, sizeof(int));
       read(piperes[0],&max, sizeof(int));
@@ -349,6 +341,7 @@ int main(int argc, char **argv) {
   double elapsed_time = (finish_time.tv_sec - start_time.tv_sec) * 1000.0;
   elapsed_time += (finish_time.tv_usec - start_time.tv_usec) / 1000.0;
 
+  free(array);
 
   printf("Min: %d\n", min_max.min);
   printf("Max: %d\n", min_max.max);
@@ -356,8 +349,3 @@ int main(int argc, char **argv) {
   fflush(NULL);
   return 0;
 }
-/*Версия от 23 марта
-Нынешние ошибки
-1. При генерации потоков происходит лишняя итерация
-2. Вывод минимума и максимума происходит более одного раза (pnum +1)
-3. Неккоректная обработка входных данных более одного раза*/
