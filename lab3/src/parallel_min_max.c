@@ -119,9 +119,18 @@ int main(int argc, char **argv) {
     int count,k = 0;
     char ** files_names;
     int * znach;
+    int ** pnum_mass2;
     znach = malloc(sizeof(int)*pnum);
     znach[0] = 0;
+    
+      pnum_mass2 = malloc(sizeof(int*)*pnum);
+        while(*pnum_mass2)
+        {
+            *pnum_mass2 = malloc(sizeof(int)*2);
+        }
     files_names = malloc(sizeof(char*)*pnum);
+    if(with_files)
+    {
     int * pnum_mass;
     pnum_mass = malloc(sizeof(int)*pnum);
     /*Создание массива файлов взаимодействия*/
@@ -132,6 +141,9 @@ int main(int argc, char **argv) {
         strcpy(files_names[i],&buff);
         strncat(files_names[i], ".txt",4);
     }
+    }
+
+    
     /*
     Задание интервалов чтения данных
     */
@@ -156,9 +168,9 @@ int main(int argc, char **argv) {
         // child process
 
         // parallel somehow
-
+k=0;
         if (with_files) {
-                    k=0;
+                    
                     FILE * file1 = fopen(files_names[i],"w");
                     for(j=znach[i];j<znach[i+1];j++)
                     {
@@ -176,31 +188,22 @@ int main(int argc, char **argv) {
                     fclose(file1);
                     array = array;
         } else {
-          if(active_child_processes == 1)
-                    {
-                        if (pipe(pipefd) < 0) 
+                        if (pipe(pnum_mass2[i]) < 0) 
                         {
                             printf( "Pipe failed: ");
                             exit(1);
                         }
-                        for(i=0;i<array_size/2;i++)
+                        for(j=znach[i];j<znach[i+1];i++)
                         {
+                            if(j!=0 && j == znach[i])
+                        {
+                            while(k<znach[i])
+                            {
+                                array++;
+                                k++;
+                            }
                             printf("Запись в очередь 1\n");
-                            write(pipefd[1],&*array,sizeof(int));
-                            array++;
-                        }
-                    }
-                    if(active_child_processes == 2)
-                    {
-                        if (pipe(pipefd2) < 0) 
-                        {
-                            printf( "Pipe2 failed: ");
-                            exit(1);
-                        }
-                        for(i=array_size/2;i<array_size;i++)
-                        {
-                            printf("Запись в очередь 2\n");
-                            write(pipefd2[1],&*array,sizeof(int));
+                            write(pnum_mass2[i][1],&*array,sizeof(int));
                             array++;
                         }
                     }
@@ -208,7 +211,7 @@ int main(int argc, char **argv) {
         return 0;
       }
 
-    } else {
+     else {
       printf("Fork failed!\n");
       return 1;
     }
@@ -256,12 +259,11 @@ int main(int argc, char **argv) {
 
         int i;
         int p;
-        if(active_child_processes ==2)
-        {
+
             for(i=0; i<array_size/2;i++)
             {
                 printf("Чтение очередь 1\n");
-                read(pipefd[0],&p, sizeof(int));
+                read(pnum_mass2[i][0],&p, sizeof(int));
                 if (p < min2)
                 min2 = p;
                 if(p>max2)
@@ -269,20 +271,6 @@ int main(int argc, char **argv) {
             }
             write(piperes2[1],&min2,sizeof(int));
         write(piperes2[1],&max2,sizeof(int));
-        }
-        else
-        {
-            for(i=array_size/2;i<array_size;i++)
-            {
-                printf("Чтение очередь 2\n");
-                read(pipefd2[0],&p, sizeof(int));
-                if (p < min2)
-                min2 = p;
-                if(p>max2)
-                max2 = p;
-            }
-            write(piperes[1],&min2,sizeof(int));
-        write(piperes[1],&max2,sizeof(int));
         }
         
     }
