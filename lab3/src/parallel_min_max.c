@@ -111,12 +111,10 @@ int main(int argc, char **argv) {
   int *array = malloc(sizeof(int) * array_size);
   GenerateArray(array, array_size, seed);
   int active_child_processes = 0;
-  int pipefd[2];
-  int pipefd2[2];
-  int piperes[2];
-    int piperes2[2];
     int i,j;
     int count,k = 0;
+    int pipefd[2];
+    int pipefd1[2];
     char ** files_names;
     int * znach;
     int ** pnum_mass2;
@@ -124,10 +122,10 @@ int main(int argc, char **argv) {
     znach[0] = 0;
     
       pnum_mass2 = malloc(sizeof(int*)*pnum);
-        while(*pnum_mass2)
+      /*  while(*pnum_mass2)
         {
             *pnum_mass2 = malloc(sizeof(int)*2);
-        }
+        }*/
     files_names = malloc(sizeof(char*)*pnum);
     if(with_files)
     {
@@ -188,7 +186,11 @@ k=0;
                     fclose(file1);
                     array = array;
         } else {
-                        if (pipe(pnum_mass2[i]) < 0) 
+            if(i == 0)
+            {
+
+            
+                        if (pipe(pipefd) < 0) 
                         {
                             printf( "Pipe failed: ");
                             exit(1);
@@ -202,21 +204,47 @@ k=0;
                                 array++;
                                 k++;
                             }
+                        }
                             printf("Запись в очередь 1\n");
-                            write(pnum_mass2[i][1],&*array,sizeof(int));
+                            write(pipefd[1],&*array,sizeof(int));
+                            close(pipefd[1]);
                             array++;
                         }
+                    }
+            else
+            {
+                int val;
+                 if (pipe(pipefd1) < 0) 
+                        {
+                            printf( "Pipe failed: ");
+                            exit(1);
+                        }
+                        for(j=znach[i];j<znach[i+1];i++)
+                        {
+                            if(j!=0 && j == znach[i])
+                        {
+                            while(k<znach[i])
+                            {
+                                array++;
+                                k++;
+                            }
+                        }
+                            printf("Запись в очередь 2\n");
+                            write(pipefd1[1],&*array,sizeof(int));
+                            close(pipefd1[1]);
+                            array++;
+                        }
+                        
                     }
         }
         return 0;
       }
-
+    }
      else {
       printf("Fork failed!\n");
       return 1;
     }
   }
-
   while (active_child_processes > 0) {
     int  val;
     int min2 = INT_MAX;
@@ -256,23 +284,33 @@ k=0;
     }
     else
     {
-
-        int i;
         int p;
+        if(active_child_processes == 2)
+        {
 
-            for(i=0; i<array_size/2;i++)
-            {
-                printf("Чтение очередь 1\n");
-                read(pnum_mass2[i][0],&p, sizeof(int));
+        
+           while(read(pipefd1[0],&p, 1)>0)
+            { 
                 if (p < min2)
                 min2 = p;
                 if(p>max2)
                 max2 = p;
             }
-            write(piperes2[1],&min2,sizeof(int));
-        write(piperes2[1],&max2,sizeof(int));
+            write(pipefd1[1],&min2,sizeof(int));
+        write(pipefd1[1],&max2,sizeof(int));
         }
-        
+        else
+        {
+            while(read(pipefd[0],&p, 1)>0)
+            { 
+                if (p < min2)
+                min2 = p;
+                if(p>max2)
+                max2 = p;
+            }
+            write(pipefd[1],&min2,sizeof(int));
+        write(pipefd[1],&max2,sizeof(int));
+        }
     }
 
     active_child_processes -= 1;
@@ -307,17 +345,18 @@ k=0;
             fclose(f1);
         }
     } else {
-      if(i==0)
+        if(i==0)
         {
-      read(piperes[0],&min, sizeof(int));
-      read(piperes[0],&max, sizeof(int));
+            read(pipefd[0],&min, sizeof(int));
+      read(pipefd[0],&max, sizeof(int));
         }
         else
         {
-            read(piperes2[0],&min, sizeof(int));
-      read(piperes2[0],&max, sizeof(int));
+             read(pipefd1[0],&min, sizeof(int));
+      read(pipefd1[0],&max, sizeof(int));
         }
-    }
+        }
+    
 
     if (min < min_max.min) min_max.min = min;
     if (max > min_max.max) min_max.max = max;
@@ -336,4 +375,4 @@ k=0;
   printf("Elapsed time: %fms\n", elapsed_time);
   fflush(NULL);
   return 0;
-}
+  }
