@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
     char ** files_names;
     int * znach;
     int ** pnum_mass2;
+    int buff [20];
     znach = malloc(sizeof(int)*pnum);
     znach[0] = 0;
     
@@ -172,6 +173,7 @@ k=0;
                     FILE * file1 = fopen(files_names[i],"w");
                     for(j=znach[i];j<znach[i+1];j++)
                     {
+                        printf("Просматривается промежуток от %i до %i\n",znach[i],znach[i+1]);
                         if(j!=0 && j == znach[i])
                         {
                             while(k<znach[i])
@@ -188,15 +190,18 @@ k=0;
         } else {
             if(i == 0)
             {
-
+                 printf( "Pipe failed: ");
             
                         if (pipe(pipefd) < 0) 
                         {
                             printf( "Pipe failed: ");
                             exit(1);
                         }
-                        for(j=znach[i];j<znach[i+1];i++)
+                        
+                        for(j=znach[i];j<znach[i+1];j++)
                         {
+                            printf("Просматривается промежуток от %i до %i\n",znach[i],znach[i+1]);
+                            printf("j = %i\n",j);
                             if(j!=0 && j == znach[i])
                         {
                             while(k<znach[i])
@@ -205,33 +210,38 @@ k=0;
                                 k++;
                             }
                         }
+                        close(pipefd[0]);
                             printf("Запись в очередь 1\n");
-                            write(pipefd[1],&*array,sizeof(int));
-                            close(pipefd[1]);
+                            write(pipefd[1],&*array,sizeof(*array));
                             array++;
+                            
                         }
                     }
             else
             {
                 int val;
+                char *p;
                  if (pipe(pipefd1) < 0) 
                         {
                             printf( "Pipe failed: ");
                             exit(1);
                         }
-                        for(j=znach[i];j<znach[i+1];i++)
+                        close(pipefd1[0]);
+                        for(j=znach[i];j<znach[i+1];j++)
                         {
+                            printf("Просматривается промежуток от %i до %i\n",znach[i],znach[i+1]);
                             if(j!=0 && j == znach[i])
                         {
                             while(k<znach[i])
                             {
                                 array++;
                                 k++;
+                                printf("k = %i\n",k);
                             }
                         }
-                            printf("Запись в очередь 2\n");
-                            write(pipefd1[1],&*array,sizeof(int));
-                            close(pipefd1[1]);
+                            
+                            write(pipefd1[1],&*array,sizeof(*array));
+                            
                             array++;
                         }
                         
@@ -288,26 +298,31 @@ k=0;
         if(active_child_processes == 2)
         {
 
-        
+        close(pipefd[1]);
            while(read(pipefd1[0],&p, 1)>0)
             { 
+                printf("Считано значение %i \n",p);
                 if (p < min2)
                 min2 = p;
                 if(p>max2)
                 max2 = p;
             }
+            close(pipefd[0]);
             write(pipefd1[1],&min2,sizeof(int));
         write(pipefd1[1],&max2,sizeof(int));
         }
         else
         {
-            while(read(pipefd[0],&p, 1)>0)
+            close(pipefd[1]);
+            while(read(pipefd[0],&p, 8)>0)
             { 
+                printf("Считано значение %i \n",p);
                 if (p < min2)
                 min2 = p;
                 if(p>max2)
                 max2 = p;
             }
+            close(pipefd[0]);
             write(pipefd[1],&min2,sizeof(int));
         write(pipefd[1],&max2,sizeof(int));
         }
@@ -347,11 +362,13 @@ k=0;
     } else {
         if(i==0)
         {
+             close(pipefd[1]);
             read(pipefd[0],&min, sizeof(int));
       read(pipefd[0],&max, sizeof(int));
         }
         else
         {
+             close(pipefd1[0]);
              read(pipefd1[0],&min, sizeof(int));
       read(pipefd1[0],&max, sizeof(int));
         }
