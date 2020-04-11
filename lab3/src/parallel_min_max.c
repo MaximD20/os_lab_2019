@@ -166,10 +166,8 @@ int i;
 
     struct timeval finish_time;
     gettimeofday(&finish_time, NULL);
-
     double elapsed_time = (finish_time.tv_sec - start_time.tv_sec) * 1000.0;
     elapsed_time += (finish_time.tv_usec - start_time.tv_usec) / 1000.0;
-
     free(array);
     remove("data.txt");
     printf("Min: %d\n", min_max.min);
