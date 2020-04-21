@@ -14,11 +14,11 @@
 
 #include "find_min_max.h"
 #include "utils.h"
-
 int main(int argc, char** argv) {
     int seed = -1;
     int array_size = -1;
     int pnum = -1;
+    int timeout = -1;
     bool with_files = false;
 
     while (true) {
@@ -28,8 +28,8 @@ int main(int argc, char** argv) {
                                           {"array_size", required_argument, 0, 0},
                                           {"pnum", required_argument, 0, 0},
                                           {"by_files", no_argument, 0, 'f'},
+                                          {"timeout",required_argument,0,0},
                                           {0, 0, 0, 0} };
-
         int option_index = 0;
         int c = getopt_long(argc, argv, "f", options, &option_index);
 
@@ -67,10 +67,18 @@ int main(int argc, char** argv) {
                     return 1;
                 }
                 break;
+           
             case 3:
                 with_files = true;
                 break;
-
+             case 4:
+                timeout = atoi(optarg);
+                if (timeout <= 0)
+                {
+                    printf("Недопустимый timeout Попробуйте снова\n");
+                    return 1;
+                }
+                break;
             defalut:
                 printf("Index %d is out of options\n", option_index);
             }
@@ -101,18 +109,49 @@ int main(int argc, char** argv) {
     int* array = malloc(sizeof(int) * array_size);
     GenerateArray(array, array_size, seed);
     int active_child_processes = 0;
-
+int i;
+int* fork_nums =  malloc(sizeof(int) * pnum);
+for(i=0;i<pnum;i++)
+{
+    fork_nums[i] = INT_MIN;
+}
     struct timeval start_time;
+    struct singal_alarms
+    {
+        int * forks;
+        int pnums;
+        /*signal_alarms(int * fd, int g)
+        {
+                    int i;
+            for(i=0;i<g;i++)
+            {   
+                if(fd[i]>0)
+                {
+                    kill(fd[i],SIGKILL);
+                }
+            }
+        }*/
+    } sigs;
     gettimeofday(&start_time, NULL);
     int pipefd[2];
     pipe(pipefd);
     int size = array_size / pnum;
-int i;
+
     for ( i = 0; i < pnum; i++) {
         pid_t child_pid = fork();
         if (child_pid >= 0) {
             active_child_processes += 1;
             if (child_pid == 0) {
+               fork_nums[i] = getpid();
+                if(timeout != -1)
+                {
+                   // struct singnal_alarm Alarms;
+                    // signal (SIGALRM, singal_alarms(pnum,fork_nums));
+                   /* if(alarm(timeout)==0)
+                    {
+                        printf("AAAAA!!!\n");
+                    }*/
+                }
                 struct MinMax DataMinMax;
                 if (i != pnum - 1) 
                 {
