@@ -14,6 +14,7 @@
 
 #include "find_min_max.h"
 #include "utils.h"
+void signal_alarms();
 int main(int argc, char** argv) {
     int seed = -1;
     int array_size = -1;
@@ -120,17 +121,6 @@ for(i=0;i<pnum;i++)
     {
         int * forks;
         int pnums;
-        /*signal_alarms(int * fd, int g)
-        {
-                    int i;
-            for(i=0;i<g;i++)
-            {   
-                if(fd[i]>0)
-                {
-                    kill(fd[i],SIGKILL);
-                }
-            }
-        }*/
     } sigs;
     gettimeofday(&start_time, NULL);
     int pipefd[2];
@@ -142,15 +132,14 @@ for(i=0;i<pnum;i++)
         if (child_pid >= 0) {
             active_child_processes += 1;
             if (child_pid == 0) {
-               fork_nums[i] = getpid();
+                if(i&1) setpgrp();
+
                 if(timeout != -1)
                 {
+                    printf("AAAAA!\n");
                    // struct singnal_alarm Alarms;
-                    // signal (SIGALRM, singal_alarms(pnum,fork_nums));
-                   /* if(alarm(timeout)==0)
-                    {
-                        printf("AAAAA!!!\n");
-                    }*/
+                    signal (SIGALRM, signal_alarms);
+                    alarm(timeout);
                 }
                 struct MinMax DataMinMax;
                 if (i != pnum - 1) 
@@ -214,4 +203,9 @@ for(i=0;i<pnum;i++)
     printf("Elapsed time: %fms\n", elapsed_time);
     fflush(NULL);
     return 0;
+}
+void signal_alarms()
+{
+    printf("AAAAA!\n");
+    kill(0,SIGKILL);
 }
