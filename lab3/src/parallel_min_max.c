@@ -126,21 +126,20 @@ for(i=0;i<pnum;i++)
     int pipefd[2];
     pipe(pipefd);
     int size = array_size / pnum;
-
+                    if(timeout != -1)
+                {
+                    printf("Установка таймера для принудительной остановки ДП\n");
+                    signal (SIGALRM, signal_alarms);//Привязка сигнала SIGALRM к функции signal_alarms
+                    alarm(timeout); //Установка таймера на заданное время после истечения времени посылается SIGALRM и выполняется функция signal_alarms
+                }
     for ( i = 0; i < pnum; i++) {
         pid_t child_pid = fork();
         if (child_pid >= 0) {
             active_child_processes += 1;
             if (child_pid == 0) {
-                if(i&1) setpgrp();
+                setpgrp();
 
-                if(timeout != -1)
-                {
-                    printf("AAAAA!\n");
-                   // struct singnal_alarm Alarms;
-                    signal (SIGALRM, signal_alarms);
-                    alarm(timeout);
-                }
+
                 struct MinMax DataMinMax;
                 if (i != pnum - 1) 
                 {
@@ -206,6 +205,6 @@ for(i=0;i<pnum;i++)
 }
 void signal_alarms()
 {
-    printf("AAAAA!\n");
+    printf("Принудительная остановка дочерних процессов!\n");
     kill(0,SIGKILL);
 }
