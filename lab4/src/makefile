@@ -11,7 +11,7 @@ process_memory :
 	$(CC) -o process_memory process_memory.c $(CFLAGS)
 #Для задания 5
 parallel_sum : utils.o utils.h 
-	$(CC) -o parallel_sum utils.o parallel_sum.c $(CFLAGS) -lpthread
+	$(CC) -o parallel_sum utils.o parallel_sum.c $(CFLAGS) -pthread
 
 utils.o : utils.h
 	$(CC) -o utils.o -c utils.c $(CFLAGS)
