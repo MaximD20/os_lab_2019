@@ -10,7 +10,7 @@
 #include <getopt.h>
 #include <pthread.h>
 #include <stdint.h>
-#include "../../lab3/src/utils.h"
+#include "utils.h"
 struct SumArgs {
   int *array;
   int begin;
