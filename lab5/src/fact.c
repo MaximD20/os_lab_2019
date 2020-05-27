@@ -8,7 +8,7 @@
 
 
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
-
+uint32_t i;
 typedef struct
 {
      uint64_t begin;
@@ -17,16 +17,17 @@ typedef struct
      uint64_t mod;
 } FArgs;
 
-uint64_t factorial(FArgs* arg)
+void * factorial(void* arg)
 {
-    while (arg->begin < arg->end)
+    FArgs *argr = (FArgs*)arg;
+    while (argr->begin < argr->end)
     {
-        arg->begin++;
-        arg->current *= arg->begin % arg->mod;
+        argr->begin++;
+        argr->current *= argr->begin % argr->mod;
     }
-    arg->current %= arg->mod;
-    printf("Результат = %d\n", arg->current);
-    return arg->current;
+    argr->current %= argr->mod;
+    printf("Промежуточный результат в потоке = %d\n", argr->current);
+    return (void *)(uint64_t) argr->current;
 }
 
 int main(int argc, char **argv)
@@ -95,7 +96,7 @@ int main(int argc, char **argv)
   uint64_t part = k/pnum;
 
   FArgs args[pnum];
-  for (uint32_t i = 0; i < pnum; i++)
+  for ( i = 0; i < pnum; i++)
   {
     args[i].begin = i*part;
     args[i].current = 1;
@@ -118,7 +119,7 @@ int main(int argc, char **argv)
   }
 
   uint64_t result = 1;
-  for (uint32_t i = 0; i < pnum; i++)
+  for (i = 0; i < pnum; i++)
   {
     uint64_t btwn_result = 1;
     pthread_join(threads[i], (void **)&btwn_result);                     
