@@ -19,4 +19,4 @@ MultModulo.o : MultModulo.h
 	gcc -c MultModulo.c 
 
 clean :
-	rm client server libMultModulo.o
+	rm client server *.a *.o
