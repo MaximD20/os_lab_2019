@@ -10,7 +10,7 @@
 #include <netinet/ip.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-
+#include <arpa/inet.h>
 #include <pthread.h>
 #include "MultModulo.h"
 struct FactorialArgs {
@@ -22,8 +22,8 @@ pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
 uint64_t Factorial(const struct FactorialArgs *args) {
   uint64_t ans = 1;
-
-    for (uint64_t i = args->begin; i <= args->end; i++)
+uint64_t i;
+    for ( i= args->begin; i <= args->end; i++)
   {
     ans *= i % args->mod;
   }
@@ -157,23 +157,24 @@ int main(int argc, char **argv) {
 
       struct FactorialArgs args[tnum];
       uint64_t interval = (end-begin+1)/tnum;
-      for (uint32_t i = 0; i < tnum; i++) {
-        args[i].begin = begin + i * interval;
-        args[i].end = ((i != tnum - 1) ? begin + (i + 1) * interval : end);
-        args[i].mod = mod;
+      uint32_t l;
+      for (l= 0; l < tnum; l++) {
+        args[l].begin = begin + l * interval;
+        args[l].end = ((l != tnum - 1) ? begin + (l + 1) * interval : end);
+        args[l].mod = mod;
 
-        if (pthread_create(&threads[i], NULL, ThreadFactorial,
-                           (void *)&args[i])) {
+        if (pthread_create(&threads[l], NULL, ThreadFactorial,
+                           (void *)&args[l])) {
           printf("Error: pthread_create failed!\n");
           return 1;
         }
       }
 
       uint64_t total = 1;
-      for (uint32_t i = 0; i < tnum; i++) {
+      for (l = 0; l < tnum; l++) {
         pthread_mutex_lock(&mut);
         uint64_t result = 0;
-        pthread_join(threads[i], (void **)&result);
+        pthread_join(threads[l], (void **)&result);
         total = MultModulo(total, result, mod);
         pthread_mutex_unlock(&mut);
       }

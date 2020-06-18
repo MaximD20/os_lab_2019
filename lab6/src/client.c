@@ -172,7 +172,8 @@ int main(int argc, char** argv)
     uint64_t answer = 1;
     struct ServersSegment server_part[servers_num];
     pthread_t threads[servers_num];
-    for (int i = 0; i < servers_num; i++)
+    int i;
+    for ( i= 0; i < servers_num; i++)
     {
         struct hostent* hostname = gethostbyname(to[i].ip);
         if (hostname == NULL)
@@ -188,12 +189,13 @@ int main(int argc, char** argv)
         server_part[i].mod = mod;
         pthread_create(&threads[i], NULL, defSck, (void*)&server_part[i]);
     }
-    for (uint64_t i = 0; i < servers_num; i++)
+    uint64_t l;
+    for ( l= 0; l < servers_num; l++)
     {
         pthread_mutex_lock(&mut);
         int between_answer = 0;
-        pthread_join(threads[i], (void**)&between_answer);
-        answer = multModulo(answer, between_answer, mod);
+        pthread_join(threads[l], (void**)&between_answer);
+        answer = MultModulo(answer, between_answer, mod);
         pthread_mutex_unlock(&mut);
     }
     printf("answer: %llu\n", answer);
